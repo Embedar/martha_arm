@@ -1,0 +1,19 @@
+[0.011s] Invoking command in '/ros2_ws/build/martha_arm': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --build /ros2_ws/build/martha_arm -- -j12 -l12
+[0.027s] -- Found ament_cmake: 1.3.14 (/opt/ros/humble/share/ament_cmake/cmake)
+[0.105s] -- Override CMake install command with custom implementation using symlinks instead of copying resources
+[0.151s] -- Configuring done
+[0.153s] -- Generating done
+[0.153s] -- Build files have been written to: /ros2_ws/build/martha_arm
+[0.168s] Invoked command in '/ros2_ws/build/martha_arm' returned '0': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --build /ros2_ws/build/martha_arm -- -j12 -l12
+[0.174s] Invoking command in '/ros2_ws/build/martha_arm': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --install /ros2_ws/build/martha_arm
+[0.178s] -- Install configuration: ""
+[0.179s] -- Execute custom install script
+[0.179s] [31mCMake Error at ament_cmake_symlink_install/ament_cmake_symlink_install.cmake:105 (message):
+[0.179s]   ament_cmake_symlink_install_directory() can't find
+[0.179s]   '/ros2_ws/src/martha_description/launch'
+[0.179s] Call Stack (most recent call first):
+[0.179s]   ament_cmake_symlink_install/ament_cmake_symlink_install.cmake:319 (ament_cmake_symlink_install_directory)
+[0.179s]   cmake_install.cmake:46 (include)
+[0.179s] 
+[0.179s] [0m
+[0.180s] Invoked command in '/ros2_ws/build/martha_arm' returned '1': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --install /ros2_ws/build/martha_arm

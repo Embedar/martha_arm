@@ -6,8 +6,6 @@ find_package(ament_cmake REQUIRED)
 # Instalar archivos necesarios para la simulacion
 install(
   DIRECTORY
-    config
-    launch
     meshes
     rviz
     urdf

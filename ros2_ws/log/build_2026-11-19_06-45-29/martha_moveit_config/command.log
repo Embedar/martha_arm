@@ -1,0 +1,2 @@
+Invoking command in '/ros2_ws/build/martha_moveit_config': /usr/bin/cmake --build /ros2_ws/build/martha_moveit_config -- -j12 -l12
+Invoked command in '/ros2_ws/build/martha_moveit_config' returned '0': /usr/bin/cmake --build /ros2_ws/build/martha_moveit_config -- -j12 -l12

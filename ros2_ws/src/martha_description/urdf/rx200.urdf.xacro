@@ -18,7 +18,7 @@
   <xacro:arg name="external_urdf_loc"               default=""/>
   <xacro:arg name="hardware_type"                   default="actual"/>
 
-  <xacro:property name="mesh_directory"             value="package://interbotix_xsarm_descriptions/meshes/${robot_model}_meshes"/>
+  <xacro:property name="mesh_directory"             value="package://martha_arm/meshes"/>
   <xacro:property name="urdf_loc"                   value="$(arg external_urdf_loc)"/>
   <xacro:property name="hardware_type"              value="$(arg hardware_type)"/>
   <xacro:property name="pi_offset"                  value="0.00001"/>
@@ -56,7 +56,7 @@
   <xacro:property name="finger_limit_vel"           value="1"/>
 
   <material name="interbotix_black">
-    <texture filename="package://interbotix_xsarm_descriptions/meshes/interbotix_black.png"/>
+    <texture filename="package://martha_arm/meshes/interbotix_black.png"/>
   </material>
 
   <xacro:if value="$(arg use_world_frame)">
@@ -702,8 +702,8 @@
 
   </xacro:if> <!-- use_gripper -->
 
-  <xacro:include filename="$(find interbotix_xsarm_descriptions)/urdf/control.urdf.xacro"/>
-  <xacro:include filename="$(find interbotix_xsarm_descriptions)/urdf/gazebo_configs.urdf.xacro"/>
+  <xacro:include filename="$(find martha_arm)/urdf/control.urdf.xacro"/>
+  <xacro:include filename="$(find martha_arm)/urdf/gazebo_configs.urdf.xacro"/>
 
   <xacro:if value="${hardware_type == 'gz_classic'}">
     <xacro:gazebo_configs/>

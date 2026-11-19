@@ -1,0 +1,32 @@
+[0.008s] Invoking command in '/ros2_ws/build/martha_moveit_config': /usr/bin/cmake /ros2_ws/src/martha_moveit_config -DCMAKE_INSTALL_PREFIX=/ros2_ws/install/martha_moveit_config
+[0.011s] [33mCMake Warning (dev) in CMakeLists.txt:
+[0.011s]   No project() command is present.  The top-level CMakeLists.txt file must
+[0.011s]   contain a literal, direct call to the project() command.  Add a line of
+[0.011s]   code such as
+[0.011s] 
+[0.011s]     project(ProjectName)
+[0.011s] 
+[0.011s]   near the top of the file, but after cmake_minimum_required().
+[0.011s] 
+[0.011s]   CMake is pretending there is a "project(Project)" command on the first
+[0.011s]   line.
+[0.011s] This warning is for project developers.  Use -Wno-dev to suppress it.
+[0.011s] [0m
+[0.041s] -- The C compiler identification is GNU 11.4.0
+[0.078s] -- The CXX compiler identification is GNU 11.4.0
+[0.083s] -- Detecting C compiler ABI info
+[0.124s] -- Detecting C compiler ABI info - done
+[0.130s] -- Check for working C compiler: /usr/bin/cc - skipped
+[0.131s] -- Detecting C compile features
+[0.131s] -- Detecting C compile features - done
+[0.133s] -- Detecting CXX compiler ABI info
+[0.182s] -- Detecting CXX compiler ABI info - done
+[0.188s] -- Check for working CXX compiler: /usr/bin/c++ - skipped
+[0.188s] -- Detecting CXX compile features
+[0.189s] -- Detecting CXX compile features - done
+[0.189s] -- Configuring done
+[0.190s] -- Generating done
+[0.191s] -- Build files have been written to: /ros2_ws/build/martha_moveit_config
+[0.193s] Invoked command in '/ros2_ws/build/martha_moveit_config' returned '0': /usr/bin/cmake /ros2_ws/src/martha_moveit_config -DCMAKE_INSTALL_PREFIX=/ros2_ws/install/martha_moveit_config
+[0.194s] Invoking command in '/ros2_ws/build/martha_moveit_config': /usr/bin/cmake --build /ros2_ws/build/martha_moveit_config -- -j12 -l12
+[0.218s] Invoked command in '/ros2_ws/build/martha_moveit_config' returned '0': /usr/bin/cmake --build /ros2_ws/build/martha_moveit_config -- -j12 -l12

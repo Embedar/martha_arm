@@ -1,0 +1,41 @@
+[0.012s] Invoking command in '/ros2_ws/build/martha_arm': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --build /ros2_ws/build/martha_arm -- -j12 -l12
+[0.026s] -- Found ament_cmake: 1.3.14 (/opt/ros/humble/share/ament_cmake/cmake)
+[0.107s] -- Override CMake install command with custom implementation using symlinks instead of copying resources
+[0.155s] -- Configuring done
+[0.155s] -- Generating done
+[0.157s] -- Build files have been written to: /ros2_ws/build/martha_arm
+[0.169s] Invoked command in '/ros2_ws/build/martha_arm' returned '0': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --build /ros2_ws/build/martha_arm -- -j12 -l12
+[0.175s] Invoking command in '/ros2_ws/build/martha_arm': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --install /ros2_ws/build/martha_arm
+[0.180s] -- Install configuration: ""
+[0.180s] -- Execute custom install script
+[0.180s] -- Symlinking: /ros2_ws/install/martha_arm/share/martha_arm/meshes/base.stl
+[0.188s] -- Symlinking: /ros2_ws/install/martha_arm/share/martha_arm/meshes/forearm.stl
+[0.193s] -- Symlinking: /ros2_ws/install/martha_arm/share/martha_arm/meshes/gripper.stl
+[0.199s] -- Symlinking: /ros2_ws/install/martha_arm/share/martha_arm/meshes/gripper_bar.stl
+[0.205s] -- Symlinking: /ros2_ws/install/martha_arm/share/martha_arm/meshes/gripper_finger.stl
+[0.211s] -- Symlinking: /ros2_ws/install/martha_arm/share/martha_arm/meshes/gripper_prop.stl
+[0.216s] -- Symlinking: /ros2_ws/install/martha_arm/share/martha_arm/meshes/interbotix_black.png
+[0.223s] -- Symlinking: /ros2_ws/install/martha_arm/share/martha_arm/meshes/shoulder.stl
+[0.226s] -- Symlinking: /ros2_ws/install/martha_arm/share/martha_arm/meshes/upper_arm.stl
+[0.231s] -- Symlinking: /ros2_ws/install/martha_arm/share/martha_arm/meshes/wrist.stl
+[0.237s] -- Symlinking: /ros2_ws/install/martha_arm/share/martha_arm/rviz/nav.rviz
+[0.242s] -- Symlinking: /ros2_ws/install/martha_arm/share/martha_arm/urdf/control.urdf.xacro
+[0.247s] -- Symlinking: /ros2_ws/install/martha_arm/share/martha_arm/urdf/gazebo_configs.urdf.xacro
+[0.253s] -- Symlinking: /ros2_ws/install/martha_arm/share/martha_arm/urdf/martha_v1_carcasa.urdf.xacro
+[0.258s] -- Symlinking: /ros2_ws/install/martha_arm/share/martha_arm/urdf/rx200.urdf.xacro
+[0.263s] -- Symlinking: /ros2_ws/install/martha_arm/share/ament_index/resource_index/package_run_dependencies/martha_arm
+[0.268s] -- Symlinking: /ros2_ws/install/martha_arm/share/ament_index/resource_index/parent_prefix_path/martha_arm
+[0.274s] -- Symlinking: /ros2_ws/install/martha_arm/share/martha_arm/environment/ament_prefix_path.sh
+[0.279s] -- Symlinking: /ros2_ws/install/martha_arm/share/martha_arm/environment/ament_prefix_path.dsv
+[0.285s] -- Symlinking: /ros2_ws/install/martha_arm/share/martha_arm/environment/path.sh
+[0.290s] -- Symlinking: /ros2_ws/install/martha_arm/share/martha_arm/environment/path.dsv
+[0.295s] -- Symlinking: /ros2_ws/install/martha_arm/share/martha_arm/local_setup.bash
+[0.300s] -- Symlinking: /ros2_ws/install/martha_arm/share/martha_arm/local_setup.sh
+[0.307s] -- Symlinking: /ros2_ws/install/martha_arm/share/martha_arm/local_setup.zsh
+[0.312s] -- Symlinking: /ros2_ws/install/martha_arm/share/martha_arm/local_setup.dsv
+[0.317s] -- Symlinking: /ros2_ws/install/martha_arm/share/martha_arm/package.dsv
+[0.323s] -- Symlinking: /ros2_ws/install/martha_arm/share/ament_index/resource_index/packages/martha_arm
+[0.328s] -- Symlinking: /ros2_ws/install/martha_arm/share/martha_arm/cmake/martha_armConfig.cmake
+[0.333s] -- Symlinking: /ros2_ws/install/martha_arm/share/martha_arm/cmake/martha_armConfig-version.cmake
+[0.338s] -- Symlinking: /ros2_ws/install/martha_arm/share/martha_arm/package.xml
+[0.345s] Invoked command in '/ros2_ws/build/martha_arm' returned '0': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake --install /ros2_ws/build/martha_arm

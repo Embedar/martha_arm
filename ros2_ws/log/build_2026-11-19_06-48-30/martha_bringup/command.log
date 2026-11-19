@@ -1,0 +1,2 @@
+Invoking command in '/ros2_ws/build/martha_bringup': /usr/bin/cmake --build /ros2_ws/build/martha_bringup -- -j12 -l12
+Invoked command in '/ros2_ws/build/martha_bringup' returned '0': /usr/bin/cmake --build /ros2_ws/build/martha_bringup -- -j12 -l12

@@ -176,7 +176,7 @@ Debe aparecer algo como `card0` y `renderD128`.
 
 ```bash
 mkdir -p ~/ROBOCUP && cd ~/ROBOCUP
-git clone <URL_DEL_REPOSITORIO> martha_arm
+git clone <https://github.com/Embedar/martha_arm.git> martha_arm
 cd martha_arm
 ```
 
