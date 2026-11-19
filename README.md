@@ -1,225 +1,458 @@
-# Guía de instalación y ejecución — MARTHA
-
-Esta guía explica cómo preparar el entorno de desarrollo y ejecutar la simulación de **MARTHA** con ROS 2 Humble. Incluye las soluciones a problemas de compilación encontrados durante la puesta en marcha.
-
-> **Alcance:** procedimiento de instalación y lanzamiento. La carga correcta del brazo EB300, la garra y sus controladores debe validarse por separado en Gazebo y ROS 2.
-
-## 1. Requisitos previos
-
-- Ubuntu 22.04 LTS.
-- ROS 2 Humble instalado.
-- Herramientas `git`, `colcon` y `rosdep` disponibles.
-- Dependencias de simulación requeridas por el repositorio (Gazebo y paquetes ROS 2 asociados).
-
-Comprobar que ROS 2 está disponible:
-
-```bash
-source /opt/ros/humble/setup.bash
-ros2 pkg list
-```
-
-> `ros2 pkg list` permite comprobar que la CLI de ROS 2 está disponible.
-
-## 2. Preparar el workspace
-
-En una instalación nueva, crea el workspace convencional:
-
-```bash
-mkdir -p ~/ros2_ws/src
-cd ~/ros2_ws/src
-```
-
-Clona **una sola vez** el repositorio dentro de `src`:
-
-```bash
-git clone https://github.com/Embedar/martha_nav_robotic_arm.git
-```
-
-La estructura esperada es:
-
-```text
-~/ros2_ws/
-├── src/
-│   └── martha_nav_robotic_arm/
-├── build/      # Se crea al compilar
-├── install/    # Se crea al compilar
-└── log/        # Se crea al compilar
-```
-
-> Si ya tienes el repositorio en `~/ros2_ws/src/martha_nav_robotic_arm`, **no vuelvas a clonarlo**. Actualízalo mediante `git pull` solamente cuando quieras incorporar cambios remotos y hayas revisado tus modificaciones locales.
-
-## 3. Resolver dependencias y compilar
-
-Desde la raíz del workspace:
-
-```bash
-source /opt/ros/humble/setup.bash
-cd ~/ros2_ws
-
-# Instalar dependencias declaradas por los paquetes (requiere rosdep configurado)
-rosdep install --from-paths src --ignore-src -r -y --rosdistro humble
-
-# Compilar
-colcon build --symlink-install
-```
-
-Al finalizar, carga los paquetes de tu workspace:
-
-```bash
-source ~/ros2_ws/install/setup.bash
-```
-
-Verifica que ROS 2 reconoce el paquete:
-
-```bash
-ros2 pkg prefix martha_nav
-```
-
-> Si `rosdep` indica que falta un paquete o una clave de dependencia, revisa el mensaje de error antes de continuar. No todas las dependencias específicas de la simulación necesariamente están declaradas en el repositorio.
-
-## 4. Ejecutar la simulación
-
-En una terminal con el entorno cargado:
-
-```bash
-source /opt/ros/humble/setup.bash
-source ~/ros2_ws/install/setup.bash
-
-ros2 launch martha_nav sim.launch.py \
-  robot:=martha_tower \
-  drive:=mecanum \
-  with_arm:=true
-```
-
-Los argumentos usados en este proyecto son:
-
-| Argumento | Valor utilizado | Finalidad |
-|---|---|---|
-| `robot` | `martha_tower` | Seleccionar la variante de MARTHA con torre. |
-| `drive` | `mecanum` | Seleccionar el modelo de tracción mecanum. |
-| `with_arm` | `true` | Solicitar la inclusión del brazo en la simulación. |
-
-Para consultar los argumentos realmente admitidos por tu versión del archivo de lanzamiento:
-
-```bash
-ros2 launch martha_nav sim.launch.py --show-args
-```
-
-**Importante:** que el launch se ejecute no demuestra por sí solo que el brazo, la garra ni `ros2_control` estén operativos; comprueba su presencia y sus interfaces.
-
-## 5. Comandos rápidos para sesiones posteriores
-
-Si el proyecto ya fue compilado y no cambiaste archivos que requieren nueva instalación o compilación:
-
-```bash
-source /opt/ros/humble/setup.bash
-source ~/ros2_ws/install/setup.bash
-ros2 launch martha_nav sim.launch.py \
-  robot:=martha_tower \
-  drive:=mecanum \
-  with_arm:=true
-```
-
-Si modificaste código o archivos instalados por el paquete:
-
-```bash
-source /opt/ros/humble/setup.bash
-cd ~/ros2_ws
-colcon build --symlink-install
-source install/setup.bash
-```
-
-## 6. Verificaciones básicas
-
-En una **segunda terminal**, carga primero ROS 2 y el workspace:
-
-```bash
-source /opt/ros/humble/setup.bash
-source ~/ros2_ws/install/setup.bash
-
-ros2 node list
-ros2 topic list
-ros2 action list
-```
-
-Si los controladores de `ros2_control` están presentes, inspecciónalos con:
-
-```bash
-ros2 control list_controllers
-```
-
-> Este último comando requiere que la interfaz de `controller_manager` correspondiente esté activa. Si no aparece, revisa la configuración de control del robot antes de asumir que los controladores funcionan.
-
-## 7. Solución de problemas frecuentes
-
-### A. `Duplicate package names not supported`
-
-**Causa:** `colcon` encontró más de una copia de un paquete con el mismo nombre. Por ejemplo:
-
-```text
-~/ros2_ws/martha_nav_robotic_arm/martha_nav_robotic_arm/
-~/ros2_ws/src/martha_nav_robotic_arm/
-```
-
-**Solución:** conserva una única copia activa dentro de `src`. Antes de mover nada, verifica las rutas:
-
-```bash
-cd ~/ros2_ws
-find . -name package.xml -not -path './build/*' -not -path './install/*'
-```
-
-Si confirmas que la carpeta adicional es una copia duplicada y no contiene trabajo que necesites en este workspace, puedes apartarla sin borrarla:
-
-```bash
-mv ~/ros2_ws/martha_nav_robotic_arm ~/martha_nav_robotic_arm_backup
-```
-
-Este comando corresponde **solamente** al caso donde existe esa carpeta adicional. No lo ejecutes si no existe o si allí está tu única copia de trabajo.
-
-### B. `Package 'martha_nav' not found`
-
-**Causa probable:** no cargaste el entorno generado por `colcon`, o el paquete no se instaló correctamente.
-
-```bash
-source /opt/ros/humble/setup.bash
-source ~/ros2_ws/install/setup.bash
-ros2 pkg prefix martha_nav
-```
-
-Si aún no aparece, vuelve a compilar desde `~/ros2_ws` y revisa el resultado.
-
-### C. `can't copy .../build/martha_nav/launch/burger.launch.py`
-
-Este error apareció tras reorganizar un workspace con paquetes duplicados. Puede deberse a artefactos de compilación anteriores o a un problema de instalación del paquete.
-
-Primero limpia **solo los artefactos del paquete afectado**:
-
-```bash
-cd ~/ros2_ws
-rm -rf build/martha_nav install/martha_nav
-source /opt/ros/humble/setup.bash
-colcon build --symlink-install --packages-select martha_nav
-source install/setup.bash
-```
-
-Si el error persiste, comprueba que el archivo fuente existe y que la configuración de instalación lo referencia correctamente:
-
-```bash
-find ~/ros2_ws/src/martha_nav_robotic_arm -name 'burger.launch.py'
-find ~/ros2_ws/src/martha_nav_robotic_arm -name 'setup.py'
-```
-
-No borres todo el workspace ni modifiques `setup.py` sin identificar primero la causa.
-
-## 8. Buenas prácticas
-
-- Ejecuta `colcon build` desde la **raíz del workspace** (`~/ros2_ws`), no desde `src`.
-- Mantén una única copia activa de cada paquete ROS 2.
-- Tras compilar, ejecuta `source install/setup.bash` en la terminal donde vas a lanzar ROS 2.
-- Cuando abras una terminal nueva, vuelve a cargar los entornos.
-- Usa `--show-args` para confirmar las opciones de cada launch.
-- Valida por separado descripción URDF/Xacro, simulación física, articulaciones, controladores y garra.
+# MARTHA Arm
+
+Entorno de desarrollo y simulación del brazo robótico **MARTHA** (RoboCup) con
+**ROS 2 Humble**, **Gazebo Classic 11** y **MoveIt 2**, todo dentro de Docker.
+No necesitas instalar ROS en tu equipo: solo Docker y, si tienes GPU NVIDIA,
+el NVIDIA Container Toolkit.
 
 ---
 
-**Entorno de referencia:** Ubuntu 22.04 LTS · ROS 2 Humble · MARTHA · Gazebo.
+## Tabla de contenidos
+
+1. [Estructura del repositorio](#1-estructura-del-repositorio)
+2. [Requisitos](#2-requisitos)
+3. [Instalación en el anfitrión (host)](#3-instalación-en-el-anfitrión-host)
+4. [Clonar y configurar el proyecto](#4-clonar-y-configurar-el-proyecto)
+5. [Construir y levantar el contenedor](#5-construir-y-levantar-el-contenedor)
+6. [Verificar que todo funciona](#6-verificar-que-todo-funciona)
+7. [Compilar el workspace](#7-compilar-el-workspace)
+8. [Uso diario](#8-uso-diario)
+9. [Variables de configuración](#9-variables-de-configuración)
+10. [Solución de problemas](#10-solución-de-problemas)
+
+---
+
+## 1. Estructura del repositorio
+
+```
+martha_arm/
+├── README.md
+├── sim.sh                  # Script de ayuda para lanzar la simulación
+├── ros2_ws/                # Workspace de ROS 2 (se monta dentro del contenedor)
+│   └── src/
+└── docker/
+    ├── Dockerfile          # Imagen: ROS 2 Humble + Gazebo + MoveIt 2
+    ├── entrypoint.sh       # Carga ROS 2, Gazebo y el workspace
+    ├── compose.yaml        # Configuración base (red, X11, volúmenes)
+    ├── compose.nvidia.yaml # Override para GPU NVIDIA
+    └── compose.dri.yaml    # Override para GPU Intel / AMD
+```
+
+Qué incluye la imagen:
+
+| Componente | Detalle |
+|---|---|
+| Base | `osrf/ros:humble-desktop` (Ubuntu 22.04), fijada por digest |
+| Simulación | Gazebo Classic 11, `gazebo_ros_pkgs`, `gazebo_ros2_control` |
+| Control | `ros2_control`, `ros2_controllers` |
+| Planificación | MoveIt 2, `pick_ik`, MoveIt Setup Assistant |
+| Visualización | RViz2, `joint_state_publisher_gui` |
+| Usuario | `ros` con el mismo UID/GID que tu usuario del host |
+
+---
+
+## 2. Requisitos
+
+- **Sistema operativo:** Ubuntu 22.04 o 24.04 (probado en Ubuntu con GNOME/Wayland).
+- **Espacio en disco:** ~15 GB libres (imagen + caché).
+- **GPU (opcional pero recomendado):**
+  - NVIDIA (RTX/GTX) → driver propietario + NVIDIA Container Toolkit.
+  - Intel / AMD → drivers Mesa (vienen con Ubuntu).
+- **Internet** para descargar la imagen y los paquetes.
+
+---
+
+## 3. Instalación en el anfitrión (host)
+
+Todos los pasos de esta sección se hacen **en tu máquina**, no dentro del contenedor.
+
+### 3.1 Herramientas básicas
+
+```bash
+sudo apt update
+sudo apt install -y git curl ca-certificates x11-xserver-utils
+```
+
+`x11-xserver-utils` proporciona `xhost`, necesario para abrir ventanas gráficas desde el contenedor.
+
+### 3.2 Docker Engine + Docker Compose
+
+Si ya tienes Docker y `docker compose version` funciona, salta al punto 3.3.
+
+```bash
+# Repositorio oficial de Docker
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] \
+https://download.docker.com/linux/ubuntu \
+$(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" \
+| sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+# Instalación
+sudo apt update
+sudo apt install -y docker-ce docker-ce-cli containerd.io \
+    docker-buildx-plugin docker-compose-plugin
+```
+
+Permite usar Docker sin `sudo`:
+
+```bash
+sudo usermod -aG docker $USER
+```
+
+**Cierra sesión y vuelve a entrar** (o reinicia) para que el cambio aplique. Verifica:
+
+```bash
+docker --version
+docker compose version
+docker run --rm hello-world
+```
+
+### 3.3 Driver de NVIDIA (solo si tienes GPU NVIDIA)
+
+Comprueba si ya lo tienes:
+
+```bash
+nvidia-smi
+```
+
+Si muestra tu GPU, continúa con el punto 3.4. Si no, instala el driver recomendado:
+
+```bash
+sudo ubuntu-drivers devices      # muestra el driver recomendado
+sudo ubuntu-drivers install      # instala el recomendado
+sudo reboot
+```
+
+Si tienes **Secure Boot** activado, Ubuntu te pedirá crear una contraseña de
+MOK durante la instalación; deberás confirmarla en el siguiente reinicio.
+
+### 3.4 NVIDIA Container Toolkit (solo NVIDIA)
+
+Permite que los contenedores accedan a la GPU.
+
+```bash
+# Repositorio oficial
+curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey \
+  | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+
+curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list \
+  | sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' \
+  | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+
+# Instalación
+sudo apt update
+sudo apt install -y nvidia-container-toolkit
+
+# Registrar el runtime en Docker y reiniciar
+sudo nvidia-ctk runtime configure --runtime=docker
+sudo systemctl restart docker
+```
+
+Verifica que Docker ve el runtime y la GPU:
+
+```bash
+docker info | grep -i runtimes          # debe incluir "nvidia"
+docker run --rm --gpus all ubuntu nvidia-smi
+```
+
+Si el segundo comando muestra tu GPU, el host está listo.
+
+### 3.5 GPU Intel / AMD
+
+No requiere instalación extra. Comprueba que existe el dispositivo:
+
+```bash
+ls /dev/dri
+```
+
+Debe aparecer algo como `card0` y `renderD128`.
+
+---
+
+## 4. Clonar y configurar el proyecto
+
+```bash
+mkdir -p ~/ROBOCUP && cd ~/ROBOCUP
+git clone <URL_DEL_REPOSITORIO> martha_arm
+cd martha_arm
+```
+
+### 4.1 Archivo `.env` (UID/GID)
+
+Para que los archivos creados dentro del contenedor te pertenezcan a ti (y no a
+root), el contenedor usa tu UID/GID. Crea `docker/.env`:
+
+```bash
+cat > docker/.env << EOF
+UID=$(id -u)
+GID=$(id -g)
+ROS_DOMAIN_ID=0
+EOF
+```
+
+Compruébalo:
+
+```bash
+cat docker/.env
+```
+
+> `docker/.env` es una configuración local de cada persona; no debe subirse al
+> repositorio (añádelo a `.gitignore`).
+
+### 4.2 Permitir ventanas gráficas
+
+Cada vez que inicies sesión en tu equipo, ejecuta en el host:
+
+```bash
+xhost +local:docker
+```
+
+Debe responder `non-network local connections being added to access control list`.
+
+Verifica también tu `DISPLAY`:
+
+```bash
+echo $DISPLAY
+```
+
+Normalmente es `:0` o `:1`. Si no es `:0`, expórtalo antes de levantar el
+contenedor (ver sección 5).
+
+---
+
+## 5. Construir y levantar el contenedor
+
+Todos los comandos se ejecutan desde la raíz del repositorio (`martha_arm/`).
+Elige **una** de las tres variantes según tu hardware.
+
+### Opción A: GPU NVIDIA
+
+```bash
+docker compose -f docker/compose.yaml -f docker/compose.nvidia.yaml up -d --build
+```
+
+### Opción B: GPU Intel / AMD
+
+```bash
+docker compose -f docker/compose.yaml -f docker/compose.dri.yaml up -d --build
+```
+
+### Opción C: Sin GPU (render por software, lento)
+
+```bash
+MARTHA_SOFTWARE_GL=1 docker compose -f docker/compose.yaml up -d --build
+```
+
+La **primera construcción** descarga ROS 2 Humble, Gazebo y MoveIt 2 y puede
+tardar entre 10 y 30 minutos según tu conexión.
+
+Si tu `DISPLAY` no es `:0`, antepón la variable:
+
+```bash
+DISPLAY=$DISPLAY docker compose -f docker/compose.yaml -f docker/compose.nvidia.yaml up -d --build
+```
+
+Comprueba que el contenedor está corriendo:
+
+```bash
+docker ps --filter name=martha
+```
+
+---
+
+## 6. Verificar que todo funciona
+
+Entra al contenedor:
+
+```bash
+docker exec -it martha bash
+```
+
+El prompt cambia a `ros@...:/ros2_ws$`. **Los siguientes comandos se ejecutan
+dentro del contenedor, uno a uno:**
+
+```bash
+# 1. ROS 2 cargado
+ros2 --version
+echo $ROS_DISTRO            # humble
+
+# 2. GPU (solo NVIDIA)
+nvidia-smi
+
+# 3. Renderizado: debe decir NVIDIA (o tu GPU Intel/AMD), no "llvmpipe"
+glxinfo -B | grep -E "vendor|renderer"
+
+# 4. Interfaces gráficas
+rviz2
+gazebo --verbose
+```
+
+Qué esperar:
+
+| Prueba | Resultado correcto | Si falla |
+|---|---|---|
+| `nvidia-smi` | Muestra tu GPU | Revisar sección 3.4 |
+| `glxinfo -B` | `NVIDIA ...` en vendor/renderer | `llvmpipe` = render por CPU, ver sección 10 |
+| `rviz2` / `gazebo` | Se abre la ventana | Revisar `xhost` y `DISPLAY` |
+
+Para salir del contenedor: `exit` (el contenedor sigue corriendo en segundo plano).
+
+---
+
+## 7. Compilar el workspace
+
+Dentro del contenedor:
+
+```bash
+cd /ros2_ws
+rosdep update
+rosdep install --from-paths src --ignore-src -r -y
+colcon build --symlink-install
+source install/setup.bash
+```
+
+El contenedor incluye un alias que hace la compilación y el `source` de una vez:
+
+```bash
+cb
+```
+
+El workspace `ros2_ws/` está montado desde tu máquina, así que puedes editar el
+código con tu editor favorito en el host y compilar dentro del contenedor.
+
+---
+
+## 8. Uso diario
+
+| Acción | Comando (desde `martha_arm/`) |
+|---|---|
+| Permitir ventanas (cada sesión) | `xhost +local:docker` |
+| Levantar (NVIDIA) | `docker compose -f docker/compose.yaml -f docker/compose.nvidia.yaml up -d` |
+| Entrar al contenedor | `docker exec -it martha bash` |
+| Abrir otra terminal | `docker exec -it martha bash` (en otra pestaña) |
+| Detener | `docker compose -f docker/compose.yaml down` |
+| Reconstruir imagen | `docker compose -f docker/compose.yaml -f docker/compose.nvidia.yaml up -d --build` |
+| Recrear contenedor | añadir `--force-recreate` al `up` |
+| Ver logs | `docker logs martha` |
+
+Reemplaza `compose.nvidia.yaml` por `compose.dri.yaml` si usas Intel/AMD.
+
+Opcional: define un alias en tu `~/.bashrc` del host para no escribir tanto:
+
+```bash
+alias martha-up='cd ~/ROBOCUP/martha_arm && xhost +local:docker && docker compose -f docker/compose.yaml -f docker/compose.nvidia.yaml up -d'
+alias martha='docker exec -it martha bash'
+alias martha-down='cd ~/ROBOCUP/martha_arm && docker compose -f docker/compose.yaml down'
+```
+
+---
+
+## 9. Variables de configuración
+
+| Variable | Por defecto | Descripción |
+|---|---|---|
+| `UID` / `GID` | `1000` | UID/GID del usuario `ros` dentro del contenedor. Debe coincidir con el tuyo (`id -u`, `id -g`). Si lo cambias, reconstruye con `--build`. |
+| `DISPLAY` | `:0` | Pantalla X11 donde se abren las ventanas. |
+| `ROS_DOMAIN_ID` | `0` | Dominio DDS de ROS 2. Cámbialo si compartes red con otros equipos. |
+| `MARTHA_SOFTWARE_GL` | `0` | `1` fuerza renderizado por software (sin GPU). |
+
+Configuración de red y memoria: el contenedor usa `network_mode: host` e
+`ipc: host`, necesarios para la comunicación DDS de ROS 2 entre procesos y con
+otras máquinas de la red.
+
+---
+
+## 10. Solución de problemas
+
+### `glxinfo` dice `llvmpipe` (renderiza por CPU)
+
+Con NVIDIA:
+
+```bash
+# En el host
+docker info | grep -i runtimes                 # debe incluir nvidia
+sudo nvidia-ctk runtime configure --runtime=docker
+sudo systemctl restart docker
+docker compose -f docker/compose.yaml -f docker/compose.nvidia.yaml up -d --force-recreate
+```
+
+Si persiste, agrega en `docker/compose.nvidia.yaml`, dentro de `environment`:
+
+```yaml
+__GLX_VENDOR_LIBRARY_NAME: nvidia
+```
+
+Comprueba también que no tienes `MARTHA_SOFTWARE_GL=1` activo.
+
+### `cannot connect to X server` / `Authorization required`
+
+```bash
+# En el host
+xhost +local:docker
+echo $DISPLAY
+```
+
+Si `DISPLAY` no es `:0`, levanta el contenedor con `DISPLAY=$DISPLAY docker compose ...`.
+
+### `permission denied` al usar Docker
+
+No estás en el grupo `docker`:
+
+```bash
+sudo usermod -aG docker $USER
+```
+
+Cierra sesión y vuelve a entrar.
+
+### Los archivos de `ros2_ws/` quedan con dueño `root` o un UID raro
+
+El UID/GID del contenedor no coincide con el tuyo. Revisa `docker/.env`, luego:
+
+```bash
+docker compose -f docker/compose.yaml -f docker/compose.nvidia.yaml up -d --build --force-recreate
+sudo chown -R $(id -u):$(id -g) ros2_ws
+```
+
+### Gazebo se comporta raro o falla al cargar modelos
+
+Borra la caché de Gazebo:
+
+```bash
+docker compose -f docker/compose.yaml down
+docker volume rm martha_martha_gazebo_cache
+```
+
+### `docker: command not found` dentro del contenedor
+
+Es normal. Docker solo existe en el host. Comprueba el prompt: `ros@` es
+contenedor, `lorenzo@` (tu usuario) es host.
+
+### Los nodos de ROS 2 no se ven entre terminales
+
+Todas las terminales deben usar el mismo `ROS_DOMAIN_ID`. Verifica:
+
+```bash
+echo $ROS_DOMAIN_ID
+ros2 node list
+```
+
+### Reconstruir todo desde cero
+
+```bash
+docker compose -f docker/compose.yaml down
+docker rmi martha:humble
+docker compose -f docker/compose.yaml -f docker/compose.nvidia.yaml build --no-cache
+docker compose -f docker/compose.yaml -f docker/compose.nvidia.yaml up -d
+```
+
+---
+
+## Notas
+
+- El contenedor da `sudo` sin contraseña al usuario `ros`: pensado para
+  desarrollo, no para producción.
+- La imagen base está fijada por digest para que todos los integrantes del
+  equipo construyan exactamente el mismo entorno.

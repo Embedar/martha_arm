@@ -1,0 +1,25 @@
+
+# ==========================================================
+# MARTHA - NVIDIA GPU
+# Requiere NVIDIA Driver + NVIDIA Container Toolkit
+# ==========================================================
+
+services:
+
+  ros:
+
+    environment:
+      # Exponer todas las GPU NVIDIA disponibles
+      NVIDIA_VISIBLE_DEVICES: all
+
+      # Habilitar graficos, computo y herramientas de diagnostico
+      NVIDIA_DRIVER_CAPABILITIES: all
+
+    # Solicitar acceso a la GPU NVIDIA
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

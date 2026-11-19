@@ -1,0 +1,46 @@
+
+# ==========================================================
+# MARTHA - Docker Compose
+# ==========================================================
+
+name: martha
+
+services:
+
+  ros:
+
+    # Construccion de la imagen
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        USER_UID: ${UID:-1000}
+        USER_GID: ${GID:-1000}
+
+    # Identificacion
+    image: martha:humble
+    container_name: martha
+
+    # Red del anfitrion para ROS 2 DDS
+    network_mode: host
+
+    # Memoria compartida
+    ipc: host
+
+    # Variables de entorno
+    environment:
+      DISPLAY: ${DISPLAY:-:0}
+      QT_X11_NO_MITSHM: "1"
+      QT_QPA_PLATFORM: xcb
+      LIBGL_ALWAYS_SOFTWARE: ${MARTHA_SOFTWARE_GL:-0}
+      ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-0}
+
+    # Carpetas compartidas
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ../ros2_ws:/ros2_ws:rw
+      - martha_gazebo_cache:/home/ros/.gazebo
+
+# Volumen persistente para Gazebo
+volumes:
+  martha_gazebo_cache:

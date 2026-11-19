@@ -1,0 +1,541 @@
+<?xml version="1.0"?>
+<!-- Martha for martha_nav. Mecanum wheels with rollers and a ros2_control stack, one
+     robot (no namespaces or frame prefixes) and no IMU. The drive argument below swaps
+     the mecanum wheels for planar_move.
+
+     tower false keeps the measurements of the original martha/urdf/learning.xacro, the
+     robot ROBOTS['martha'] in martha_nav/robots.py was trained for, LiDAR 0.2325 m ahead
+     of base_link. tower true (the default) is the robot as built (measured 2026-10-21) and
+     ROBOTS['martha_tower'], with two 5 mm boards 10 cm apart, the LiDAR on the upper one 0.19 m
+     ahead of base_link, and the aluminium tower. The contact shell is 0.58 x 0.41 m, longer
+     than the 0.56 m footprint so that it covers the wheels.
+
+     IMPORTANT. Do not write a colon followed by a space anywhere in this file, not
+     even inside a comment. gazebo_ros2_control passes the whole expanded URDF as a
+     ROS parameter override rule, whose value is parsed as YAML, and a colon plus a
+     space there makes that parse fail, so the controller_manager never starts.
+     test_urdf.py checks this.
+
+     xacro urdf/martha.urdf.xacro -o /tmp/martha.urdf
+-->
+<robot name="martha" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+    <!-- drive: "mecanum" simulates the four wheels with their rollers through
+         ros2_control (realistic, slower); "planar" replaces them with fixed wheels
+         and gazebo_ros_planar_move (fast, no wheel dynamics). -->
+    <xacro:arg name="drive" default="mecanum" />
+    <xacro:arg name="controllers_file" default="$(find martha_nav)/config/controllers.yaml" />
+    <xacro:arg name="lidar_samples" default="360" />
+    <xacro:arg name="lidar_visualize" default="false" />
+    <!-- tower: the aluminium tower on the chassis (ROBOTS['martha_tower']). "false" is the
+         robot ROBOTS['martha'] was trained for, without it. -->
+    <xacro:arg name="tower" default="true" />
+
+    <material name="black"><color rgba="0 0 0 1" /></material>
+    <material name="grey"><color rgba="0.7 0.7 0.7 1" /></material>
+    <material name="red"><color rgba="1 0 0 1" /></material>
+    <material name="plastic"><color rgba="0.10 0.35 0.85 0.75" /></material>
+
+    <!-- Chassis: a narrow front and rear plate around a wider centre plate. -->
+    <xacro:property name="base_front_x" value="0.160" />
+    <xacro:property name="base_center_x" value="0.238" />
+    <xacro:property name="base_rear_x" value="0.160" />
+    <xacro:property name="base_narrow_y" value="0.240" />
+    <xacro:property name="base_center_y" value="0.410" />
+    <xacro:property name="base_z" value="0.025" />
+    <xacro:property name="height_0" value="0.125" />
+    <xacro:property name="wheel_length" value="0.045" />
+    <xacro:property name="wheel_radius" value="0.075" />
+    <!-- Mecanum wheel: a hub plus 12 rollers reaching 0.079 m from the axle. -->
+    <xacro:property name="hub_radius" value="0.045" />
+    <xacro:property name="roller_radius" value="0.014" />
+    <xacro:property name="roller_length" value="0.040" />
+    <xacro:property name="roller_mount_radius" value="0.065" />
+    <xacro:property name="roller_angle" value="0.785398" />
+    <!-- Where the original model puts them. The rollers reach 0.079 m from the axle,
+         so the wheels end at 0.21 + 0.079 = 0.289 m, inside the contact shell below. -->
+    <xacro:property name="wheel_pos_x" value="0.21" />
+    <xacro:property name="wheel_pos_y" value="0.175" />
+    <xacro:property name="wheel_pos_z" value="0.08" />
+    <xacro:property name="lidar_length" value="0.04" />
+    <xacro:property name="lidar_radius" value="0.0475" />
+    <!-- lidar_offset_x of ROBOTS['martha'] or ['martha_tower'] in martha_nav/robots.py.
+         With the tower, scan_z is the scan plane, 3.1 cm above the upper board it rests on. -->
+    <xacro:property name="built" value="${'$(arg tower)' == 'true'}" />
+    <xacro:if value="${built}">
+        <xacro:property name="lidar_x" value="0.19" />
+    </xacro:if>
+    <xacro:unless value="${built}">
+        <xacro:property name="lidar_x" value="0.2325" />
+    </xacro:unless>
+    <!-- Collision envelope used for contacts, held above the floor so wheel support
+         never counts as a collision. It is 0.58 m long, not the 0.56 m of the 2D
+         footprint, so a wall always touches the shell before a wheel and the bumper
+         reports it. Gazebo therefore counts a crash up to 1 cm before the 2D simulator. -->
+    <xacro:property name="contact_shell_x" value="0.580" />
+    <xacro:property name="contact_shell_y" value="0.410" />
+    <xacro:property name="contact_shell_center_z" value="0.125" />
+    <xacro:property name="contact_shell_height" value="0.200" />
+    <xacro:property name="lidar_shell_clearance" value="0.010" />
+    <!-- The robot as built (tower true), measured 2026-10-21. Two 5 mm boards 0.57 m long:
+         the lower one, of the chassis shape, on the wheel frame with its top 0.095 m above the
+         floor, and 10 cm above it the upper one, a 0.57 x 0.405 m rectangle with its top at
+         0.20 m. The LiDAR rests on the upper board, its scan plane 3.1 cm higher. -->
+    <xacro:property name="board_z" value="0.005" />
+    <xacro:property name="board_center_x" value="0.250" />
+    <xacro:property name="upper_board_x" value="0.570" />
+    <xacro:property name="upper_board_y" value="0.405" />
+    <xacro:property name="lower_board_top" value="0.095" />
+    <xacro:property name="upper_board_top" value="0.200" />
+    <xacro:property name="scan_z" value="${upper_board_top + 0.031}" />
+    <!-- Height of the LiDAR visual inside its link and of the base_lidar joint, per variant. -->
+    <xacro:if value="${built}">
+        <xacro:property name="lidar_visual_z" value="${upper_board_top + lidar_length/2 - scan_z}" />
+        <xacro:property name="lidar_joint_z" value="${scan_z}" />
+    </xacro:if>
+    <xacro:unless value="${built}">
+        <xacro:property name="lidar_visual_z" value="0" />
+        <xacro:property name="lidar_joint_z" value="${contact_shell_center_z + contact_shell_height/2 + lidar_length/2 + lidar_shell_clearance}" />
+    </xacro:unless>
+    <!-- Tower: four 20 x 40 mm posts, the long side along x, the front pair centred at
+         x = post_x_front and the rear pair at x = post_x_rear, y = +-post_y, rising 0.91 m from
+         the upper board. Between the two front posts and between the two rear ones, a crossbar
+         6.5 cm above the board, above the scan plane, and another higher up (bottom 0.435 m
+         over the board in front, 0.585 m behind). The posts must match ROBOTS['martha_tower']
+         in martha_nav/robots.py. The crossbars' 20 x 80 mm section (from photos) and the mass
+         (0.5 kg per metre) are estimates. -->
+    <xacro:property name="profile" value="0.020" />
+    <xacro:property name="profile_kg_per_m" value="0.5" />
+    <xacro:property name="post_sx" value="0.040" />
+    <xacro:property name="post_sy" value="0.020" />
+    <xacro:property name="post_x_front" value="-0.033" />
+    <xacro:property name="post_x_rear" value="-0.208" />
+    <xacro:property name="post_y" value="0.11" />
+    <xacro:property name="post_height" value="0.91" />
+    <xacro:property name="crossbar_sz" value="0.080" />
+    <xacro:property name="crossbar_low" value="0.065" />
+    <xacro:property name="crossbar_high_front" value="0.435" />
+    <xacro:property name="crossbar_high_rear" value="0.585" />
+    <!-- Plastic casing around the tower, flat sheets (acrylic or a 3D printed shell) that
+         close the back and the two sides, the front is open and the top is aluminium
+         profiles. The sheets sit just outside the posts, so the
+         tower is inside and they never overlap it. shell_t is the sheet thickness and
+         shell_density the plastic (1190 kg per cubic metre is acrylic, PLA is 1250). The
+         LiDAR now sees the casing instead of the individual posts. -->
+    <xacro:property name="shell_t" value="0.003" />
+    <xacro:property name="shell_density" value="1190" />
+    <!-- Platform for the arm. A shelf that leaves from the open front of the tower, its
+         top arm_height above the upper board, made of nine aluminium profiles side by side
+         (arm_bar_w wide, 0.36 m in all) arm_depth long ahead of the posts. It has no
+         supports underneath, the profiles are bolted to the front of the posts. -->
+    <xacro:property name="arm_height" value="0.40" />
+    <xacro:property name="arm_depth" value="0.29" />
+    <xacro:property name="arm_bar_w" value="0.04" />
+    <xacro:property name="arm_thickness" value="0.02" />
+
+    <!-- A plate of the chassis shape: narrow ends around a wider centre, centred at height z. -->
+    <xacro:macro name="chassis_plate" params="center_x thickness z">
+        <visual>
+            <origin xyz="${center_x/2 + base_front_x/2} 0 ${z}"/>
+            <geometry><box size="${base_front_x} ${base_narrow_y} ${thickness}"/></geometry>
+            <material name="grey"/>
+        </visual>
+        <visual>
+            <origin xyz="0 0 ${z}"/>
+            <geometry><box size="${center_x} ${base_center_y} ${thickness}"/></geometry>
+            <material name="grey"/>
+        </visual>
+        <visual>
+            <origin xyz="${-(center_x/2 + base_rear_x/2)} 0 ${z}"/>
+            <geometry><box size="${base_rear_x} ${base_narrow_y} ${thickness}"/></geometry>
+            <material name="grey"/>
+        </visual>
+    </xacro:macro>
+
+    <link name="base_link">
+        <xacro:unless value="${built}">
+            <xacro:chassis_plate center_x="${base_center_x}" thickness="${base_z}" z="${height_0}" />
+        </xacro:unless>
+        <xacro:if value="${built}">
+            <xacro:chassis_plate center_x="${board_center_x}" thickness="${board_z}" z="${lower_board_top - board_z/2}" />
+            <visual>
+                <origin xyz="0 0 ${upper_board_top - board_z/2}"/>
+                <geometry><box size="${upper_board_x} ${upper_board_y} ${board_z}"/></geometry>
+                <material name="grey"/>
+            </visual>
+        </xacro:if>
+
+        <!-- One collision only, the contact shell. It is the rectangle the 2D
+             simulator checks, 2 cm longer to cover the wheels. -->
+        <collision name="contact_shell_collision">
+            <origin xyz="0 0 ${contact_shell_center_z}"/>
+            <geometry>
+                <box size="${contact_shell_x} ${contact_shell_y} ${contact_shell_height}"/>
+            </geometry>
+        </collision>
+
+        <!-- Chassis, boards and electronics. 6.88 kg makes the robot without casing or arm
+             platform add up to the 12.8 kg weighed (wheels 3.44, lidar 0.1, tower 2.38). -->
+        <inertial>
+            <mass value="6.88"/>
+            <inertia ixx="0.1" iyy="0.1" izz="0.1" ixy="0" ixz="0" iyz="0"/>
+        </inertial>
+    </link>
+
+    <link name="lidar">
+        <visual>
+            <!-- With the tower the link sits at the scan plane, the housing on the board below it. -->
+            <origin xyz="0 0 ${lidar_visual_z}"/>
+            <geometry><cylinder length="${lidar_length}" radius="${lidar_radius}"/></geometry>
+            <material name="red" />
+        </visual>
+        <inertial>
+            <mass value="0.1"/>
+            <inertia ixx="1e-4" ixy="0.0" ixz="0.0" iyy="1e-4" iyz="0.0" izz="1e-4"/>
+        </inertial>
+    </link>
+
+    <joint name="base_lidar" type="fixed">
+        <parent link="base_link" />
+        <child link="lidar" />
+        <!-- x is the value lidar_offset_x uses. The scan plane sits above the contact shell
+             so the robot never sees itself, only the tower's posts. -->
+        <origin xyz="${lidar_x} 0 ${lidar_joint_z}"/>
+    </joint>
+
+    <!-- One straight aluminium profile, fixed to base_link and centred on (x, y, z). -->
+    <xacro:macro name="profile_bar" params="name x y z sx sy sz">
+        <xacro:property name="mass" value="${profile_kg_per_m * (sx + sy + sz - 2 * profile)}" />
+        <link name="${name}">
+            <visual>
+                <geometry><box size="${sx} ${sy} ${sz}"/></geometry>
+                <material name="grey"/>
+            </visual>
+            <collision>
+                <geometry><box size="${sx} ${sy} ${sz}"/></geometry>
+            </collision>
+            <inertial>
+                <mass value="${mass}"/>
+                <inertia ixx="${mass * (sy*sy + sz*sz) / 12}" iyy="${mass * (sx*sx + sz*sz) / 12}"
+                         izz="${mass * (sx*sx + sy*sy) / 12}" ixy="0" ixz="0" iyz="0"/>
+            </inertial>
+        </link>
+        <joint name="base_${name}_joint" type="fixed">
+            <parent link="base_link" />
+            <child link="${name}" />
+            <origin xyz="${x} ${y} ${z}"/>
+        </joint>
+        <gazebo reference="${name}">
+            <material>Gazebo/Grey</material>
+        </gazebo>
+    </xacro:macro>
+
+    <!-- One flat plastic sheet, fixed to base_link and centred on (x, y, z). -->
+    <xacro:macro name="shell_panel" params="name x y z sx sy sz">
+        <xacro:property name="panel_mass" value="${shell_density * sx * sy * sz}" />
+        <link name="${name}">
+            <visual>
+                <geometry><box size="${sx} ${sy} ${sz}"/></geometry>
+                <material name="plastic"/>
+            </visual>
+            <collision>
+                <geometry><box size="${sx} ${sy} ${sz}"/></geometry>
+            </collision>
+            <inertial>
+                <mass value="${panel_mass}"/>
+                <inertia ixx="${panel_mass * (sy*sy + sz*sz) / 12}" iyy="${panel_mass * (sx*sx + sz*sz) / 12}"
+                         izz="${panel_mass * (sx*sx + sy*sy) / 12}" ixy="0" ixz="0" iyz="0"/>
+            </inertial>
+        </link>
+        <joint name="base_${name}_joint" type="fixed">
+            <parent link="base_link" />
+            <child link="${name}" />
+            <origin xyz="${x} ${y} ${z}"/>
+        </joint>
+        <gazebo reference="${name}">
+            <material>Gazebo/Blue</material>
+        </gazebo>
+    </xacro:macro>
+
+    <xacro:if value="${built}">
+        <xacro:property name="post_z" value="${upper_board_top + post_height/2}" />
+        <xacro:property name="inner_y" value="${2*post_y - post_sy}" />
+        <!-- The four posts. They cross the LiDAR's scan plane, so it sees them. -->
+        <xacro:profile_bar name="tower_post_front_left" x="${post_x_front}" y="${post_y}" z="${post_z}" sx="${post_sx}" sy="${post_sy}" sz="${post_height}" />
+        <xacro:profile_bar name="tower_post_front_right" x="${post_x_front}" y="${-post_y}" z="${post_z}" sx="${post_sx}" sy="${post_sy}" sz="${post_height}" />
+        <xacro:profile_bar name="tower_post_rear_left" x="${post_x_rear}" y="${post_y}" z="${post_z}" sx="${post_sx}" sy="${post_sy}" sz="${post_height}" />
+        <xacro:profile_bar name="tower_post_rear_right" x="${post_x_rear}" y="${-post_y}" z="${post_z}" sx="${post_sx}" sy="${post_sy}" sz="${post_height}" />
+        <!-- Crossbars between the front posts and between the rear ones, given by their bottom. -->
+        <xacro:profile_bar name="tower_crossbar_front_low" x="${post_x_front}" y="0" z="${upper_board_top + crossbar_low + crossbar_sz/2}" sx="${profile}" sy="${inner_y}" sz="${crossbar_sz}" />
+        <xacro:profile_bar name="tower_crossbar_front_high" x="${post_x_front}" y="0" z="${upper_board_top + crossbar_high_front + crossbar_sz/2}" sx="${profile}" sy="${inner_y}" sz="${crossbar_sz}" />
+        <xacro:profile_bar name="tower_crossbar_rear_low" x="${post_x_rear}" y="0" z="${upper_board_top + crossbar_low + crossbar_sz/2}" sx="${profile}" sy="${inner_y}" sz="${crossbar_sz}" />
+        <xacro:profile_bar name="tower_crossbar_rear_high" x="${post_x_rear}" y="0" z="${upper_board_top + crossbar_high_rear + crossbar_sz/2}" sx="${profile}" sy="${inner_y}" sz="${crossbar_sz}" />
+
+        <!-- Casing. Outer faces of the posts, front x = -0.013, rear x = -0.228, sides y = +-0.12.
+             The front is left open on purpose, the arm platform leaves from there. -->
+        <xacro:property name="shell_front_x" value="${post_x_front + post_sx/2}" />
+        <xacro:property name="shell_rear_x" value="${post_x_rear - post_sx/2}" />
+        <xacro:property name="shell_side_y" value="${post_y + post_sy/2}" />
+        <!-- The casing of the tower starts shell_window above the board, so the LiDAR scan plane
+             (3.1 cm above the board) passes through the open band and only meets the posts. -->
+        <xacro:property name="shell_window" value="0.10" />
+        <xacro:property name="shell_h" value="${post_height - shell_window}" />
+        <xacro:property name="shell_z" value="${upper_board_top + shell_window + shell_h/2}" />
+        <xacro:property name="shell_mid_x" value="${(shell_front_x + shell_rear_x)/2}" />
+        <xacro:property name="shell_len_x" value="${shell_front_x - shell_rear_x + 2*shell_t}" />
+        <xacro:shell_panel name="shell_rear" x="${shell_rear_x - shell_t/2}" y="0" z="${shell_z}" sx="${shell_t}" sy="${2*shell_side_y}" sz="${shell_h}" />
+        <xacro:shell_panel name="shell_left" x="${shell_mid_x}" y="${shell_side_y + shell_t/2}" z="${shell_z}" sx="${shell_len_x}" sy="${shell_t}" sz="${shell_h}" />
+        <xacro:shell_panel name="shell_right" x="${shell_mid_x}" y="${-(shell_side_y + shell_t/2)}" z="${shell_z}" sx="${shell_len_x}" sy="${shell_t}" sz="${shell_h}" />
+        <!-- Top of the tower, six aluminium profiles side by side resting on the posts. -->
+        <xacro:profile_bar name="tower_top_bar_0" x="${shell_mid_x}" y="${-2.5*arm_bar_w}" z="${upper_board_top + post_height + arm_thickness/2}" sx="${shell_len_x}" sy="${arm_bar_w}" sz="${arm_thickness}" />
+        <xacro:profile_bar name="tower_top_bar_1" x="${shell_mid_x}" y="${-1.5*arm_bar_w}" z="${upper_board_top + post_height + arm_thickness/2}" sx="${shell_len_x}" sy="${arm_bar_w}" sz="${arm_thickness}" />
+        <xacro:profile_bar name="tower_top_bar_2" x="${shell_mid_x}" y="${-0.5*arm_bar_w}" z="${upper_board_top + post_height + arm_thickness/2}" sx="${shell_len_x}" sy="${arm_bar_w}" sz="${arm_thickness}" />
+        <xacro:profile_bar name="tower_top_bar_3" x="${shell_mid_x}" y="${0.5*arm_bar_w}" z="${upper_board_top + post_height + arm_thickness/2}" sx="${shell_len_x}" sy="${arm_bar_w}" sz="${arm_thickness}" />
+        <xacro:profile_bar name="tower_top_bar_4" x="${shell_mid_x}" y="${1.5*arm_bar_w}" z="${upper_board_top + post_height + arm_thickness/2}" sx="${shell_len_x}" sy="${arm_bar_w}" sz="${arm_thickness}" />
+        <xacro:profile_bar name="tower_top_bar_5" x="${shell_mid_x}" y="${2.5*arm_bar_w}" z="${upper_board_top + post_height + arm_thickness/2}" sx="${shell_len_x}" sy="${arm_bar_w}" sz="${arm_thickness}" />
+
+        <!-- Arm platform, nine aluminium profiles side by side, bolted to the posts. -->
+        <xacro:property name="arm_top_z" value="${upper_board_top + arm_height}" />
+        <xacro:profile_bar name="arm_bar_0" x="${shell_front_x + arm_depth/2}" y="${-4*arm_bar_w}" z="${arm_top_z - arm_thickness/2}" sx="${arm_depth}" sy="${arm_bar_w}" sz="${arm_thickness}" />
+        <xacro:profile_bar name="arm_bar_1" x="${shell_front_x + arm_depth/2}" y="${-3*arm_bar_w}" z="${arm_top_z - arm_thickness/2}" sx="${arm_depth}" sy="${arm_bar_w}" sz="${arm_thickness}" />
+        <xacro:profile_bar name="arm_bar_2" x="${shell_front_x + arm_depth/2}" y="${-2*arm_bar_w}" z="${arm_top_z - arm_thickness/2}" sx="${arm_depth}" sy="${arm_bar_w}" sz="${arm_thickness}" />
+        <xacro:profile_bar name="arm_bar_3" x="${shell_front_x + arm_depth/2}" y="${-1*arm_bar_w}" z="${arm_top_z - arm_thickness/2}" sx="${arm_depth}" sy="${arm_bar_w}" sz="${arm_thickness}" />
+        <xacro:profile_bar name="arm_bar_4" x="${shell_front_x + arm_depth/2}" y="${0*arm_bar_w}" z="${arm_top_z - arm_thickness/2}" sx="${arm_depth}" sy="${arm_bar_w}" sz="${arm_thickness}" />
+        <xacro:profile_bar name="arm_bar_5" x="${shell_front_x + arm_depth/2}" y="${1*arm_bar_w}" z="${arm_top_z - arm_thickness/2}" sx="${arm_depth}" sy="${arm_bar_w}" sz="${arm_thickness}" />
+        <xacro:profile_bar name="arm_bar_6" x="${shell_front_x + arm_depth/2}" y="${2*arm_bar_w}" z="${arm_top_z - arm_thickness/2}" sx="${arm_depth}" sy="${arm_bar_w}" sz="${arm_thickness}" />
+        <xacro:profile_bar name="arm_bar_7" x="${shell_front_x + arm_depth/2}" y="${3*arm_bar_w}" z="${arm_top_z - arm_thickness/2}" sx="${arm_depth}" sy="${arm_bar_w}" sz="${arm_thickness}" />
+        <xacro:profile_bar name="arm_bar_8" x="${shell_front_x + arm_depth/2}" y="${4*arm_bar_w}" z="${arm_top_z - arm_thickness/2}" sx="${arm_depth}" sy="${arm_bar_w}" sz="${arm_thickness}" />
+
+        <!-- Casing of the gap between the two boards. The walls follow the outline of the
+             lower board, the narrow ends around the wider centre, so they stay clear of the
+             wheels, and fill the 10 cm up to the underside of the upper board. cx is the half
+             length of the centre, ex the half length of the whole board, ey the half width of
+             the ends and my the half width of the centre. -->
+        <xacro:property name="gap_z" value="${(lower_board_top + upper_board_top - board_z)/2}" />
+        <xacro:property name="gap_h" value="${upper_board_top - board_z - lower_board_top}" />
+        <xacro:property name="cx" value="${board_center_x/2}" />
+        <xacro:property name="ex" value="${board_center_x/2 + base_front_x}" />
+        <xacro:property name="ey" value="${base_narrow_y/2}" />
+        <xacro:property name="my" value="${base_center_y/2}" />
+        <!-- Long sides of the centre. -->
+        <xacro:shell_panel name="gap_side_left" x="0" y="${my + shell_t/2}" z="${gap_z}" sx="${2*cx}" sy="${shell_t}" sz="${gap_h}" />
+        <xacro:shell_panel name="gap_side_right" x="0" y="${-(my + shell_t/2)}" z="${gap_z}" sx="${2*cx}" sy="${shell_t}" sz="${gap_h}" />
+        <!-- Steps where the centre meets the narrow ends. -->
+        <xacro:shell_panel name="gap_step_front_left" x="${cx + shell_t/2}" y="${(ey + my)/2}" z="${gap_z}" sx="${shell_t}" sy="${my - ey}" sz="${gap_h}" />
+        <xacro:shell_panel name="gap_step_front_right" x="${cx + shell_t/2}" y="${-(ey + my)/2}" z="${gap_z}" sx="${shell_t}" sy="${my - ey}" sz="${gap_h}" />
+        <xacro:shell_panel name="gap_step_rear_left" x="${-(cx + shell_t/2)}" y="${(ey + my)/2}" z="${gap_z}" sx="${shell_t}" sy="${my - ey}" sz="${gap_h}" />
+        <xacro:shell_panel name="gap_step_rear_right" x="${-(cx + shell_t/2)}" y="${-(ey + my)/2}" z="${gap_z}" sx="${shell_t}" sy="${my - ey}" sz="${gap_h}" />
+        <!-- Sides of the narrow ends. -->
+        <xacro:shell_panel name="gap_end_rear_left" x="${-(cx + ex)/2}" y="${ey + shell_t/2}" z="${gap_z}" sx="${ex - cx}" sy="${shell_t}" sz="${gap_h}" />
+        <xacro:shell_panel name="gap_end_rear_right" x="${-(cx + ex)/2}" y="${-(ey + shell_t/2)}" z="${gap_z}" sx="${ex - cx}" sy="${shell_t}" sz="${gap_h}" />
+        <xacro:shell_panel name="gap_end_front_left" x="${(cx + ex)/2}" y="${ey + shell_t/2}" z="${gap_z}" sx="${ex - cx}" sy="${shell_t}" sz="${gap_h}" />
+        <xacro:shell_panel name="gap_end_front_right" x="${(cx + ex)/2}" y="${-(ey + shell_t/2)}" z="${gap_z}" sx="${ex - cx}" sy="${shell_t}" sz="${gap_h}" />
+        <!-- Front and rear caps. -->
+        <xacro:shell_panel name="gap_cap_front" x="${ex + shell_t/2}" y="0" z="${gap_z}" sx="${shell_t}" sy="${2*ey + 2*shell_t}" sz="${gap_h}" />
+        <xacro:shell_panel name="gap_cap_rear" x="${-(ex + shell_t/2)}" y="0" z="${gap_z}" sx="${shell_t}" sy="${2*ey + 2*shell_t}" sz="${gap_h}" />
+    </xacro:if>
+
+    <!-- Fixed wheels for the planar drive: not actuated, they only carry the chassis. -->
+    <xacro:macro name="fixed_wheel" params="name x y">
+        <link name="${name}_wheel">
+            <visual>
+                <geometry><cylinder length="${wheel_length}" radius="${wheel_radius}" /></geometry>
+                <material name="black" />
+            </visual>
+            <collision>
+                <geometry><cylinder length="${wheel_length}" radius="${wheel_radius}" /></geometry>
+            </collision>
+            <inertial>
+                <mass value="0.5"/>
+                <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.01"/>
+            </inertial>
+        </link>
+        <joint name="base_${name}_wheel_joint" type="fixed">
+            <parent link="base_link" />
+            <child link="${name}_wheel" />
+            <origin xyz="${x} ${y} ${wheel_pos_z}" rpy="1.570796 0 0" />
+        </joint>
+        <gazebo reference="${name}_wheel">
+            <material>Gazebo/Black</material>
+            <mu1>0.2</mu1>
+            <mu2>0.2</mu2>
+        </gazebo>
+    </xacro:macro>
+
+    <!-- Mecanum roller. Without maxVel and minDepth the rollers chatter and the robot hops. -->
+    <xacro:macro name="mecanum_roller" params="wheel_name index x y yaw pitch">
+        <link name="${wheel_name}_roller_${index}">
+            <visual>
+                <geometry><cylinder length="${roller_length}" radius="${roller_radius}" /></geometry>
+                <material name="black" />
+            </visual>
+            <collision>
+                <geometry><cylinder length="${roller_length}" radius="${roller_radius}" /></geometry>
+            </collision>
+            <inertial>
+                <mass value="0.03"/>
+                <inertia ixx="0.00002" ixy="0.0" ixz="0.0" iyy="0.00002" iyz="0.0" izz="0.00001"/>
+            </inertial>
+        </link>
+        <joint name="${wheel_name}_roller_${index}_joint" type="continuous">
+            <parent link="${wheel_name}_wheel" />
+            <child link="${wheel_name}_roller_${index}" />
+            <origin xyz="${x} ${y} 0" rpy="0 ${pitch} ${yaw}" />
+            <axis xyz="0 0 1" />
+            <dynamics damping="0.01" friction="0.0" />
+        </joint>
+        <gazebo reference="${wheel_name}_roller_${index}">
+            <material>Gazebo/Black</material>
+            <mu1>1.0</mu1>
+            <mu2>1.0</mu2>
+            <kp>100000.0</kp>
+            <kd>1.0</kd>
+            <minDepth>0.001</minDepth>
+            <maxVel>0.1</maxVel>
+        </gazebo>
+    </xacro:macro>
+
+    <xacro:macro name="mecanum_wheel" params="name x y pitch">
+        <link name="${name}_wheel">
+            <visual>
+                <geometry><cylinder length="${wheel_length}" radius="${hub_radius}" /></geometry>
+                <material name="grey" />
+            </visual>
+            <collision>
+                <geometry><cylinder length="${wheel_length}" radius="${hub_radius}" /></geometry>
+            </collision>
+            <inertial>
+                <mass value="0.5"/>
+                <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.01"/>
+            </inertial>
+        </link>
+        <joint name="base_${name}_wheel_joint" type="continuous">
+            <parent link="base_link" />
+            <child link="${name}_wheel" />
+            <origin xyz="${x} ${y} ${wheel_pos_z}" rpy="1.57 0 0" />
+            <axis xyz="0 0 -1" />
+        </joint>
+        <xacro:mecanum_roller wheel_name="${name}" index="00" x="${roller_mount_radius}" y="0" yaw="1.570796" pitch="${pitch}" />
+        <xacro:mecanum_roller wheel_name="${name}" index="01" x="${roller_mount_radius * 0.866025}" y="${roller_mount_radius * 0.5}" yaw="2.094395" pitch="${pitch}" />
+        <xacro:mecanum_roller wheel_name="${name}" index="02" x="${roller_mount_radius * 0.5}" y="${roller_mount_radius * 0.866025}" yaw="2.617994" pitch="${pitch}" />
+        <xacro:mecanum_roller wheel_name="${name}" index="03" x="0" y="${roller_mount_radius}" yaw="3.141593" pitch="${pitch}" />
+        <xacro:mecanum_roller wheel_name="${name}" index="04" x="${-roller_mount_radius * 0.5}" y="${roller_mount_radius * 0.866025}" yaw="-2.617994" pitch="${pitch}" />
+        <xacro:mecanum_roller wheel_name="${name}" index="05" x="${-roller_mount_radius * 0.866025}" y="${roller_mount_radius * 0.5}" yaw="-2.094395" pitch="${pitch}" />
+        <xacro:mecanum_roller wheel_name="${name}" index="06" x="${-roller_mount_radius}" y="0" yaw="-1.570796" pitch="${pitch}" />
+        <xacro:mecanum_roller wheel_name="${name}" index="07" x="${-roller_mount_radius * 0.866025}" y="${-roller_mount_radius * 0.5}" yaw="-1.047198" pitch="${pitch}" />
+        <xacro:mecanum_roller wheel_name="${name}" index="08" x="${-roller_mount_radius * 0.5}" y="${-roller_mount_radius * 0.866025}" yaw="-0.523599" pitch="${pitch}" />
+        <xacro:mecanum_roller wheel_name="${name}" index="09" x="0" y="${-roller_mount_radius}" yaw="0" pitch="${pitch}" />
+        <xacro:mecanum_roller wheel_name="${name}" index="10" x="${roller_mount_radius * 0.5}" y="${-roller_mount_radius * 0.866025}" yaw="0.523599" pitch="${pitch}" />
+        <xacro:mecanum_roller wheel_name="${name}" index="11" x="${roller_mount_radius * 0.866025}" y="${-roller_mount_radius * 0.5}" yaw="1.047198" pitch="${pitch}" />
+    </xacro:macro>
+
+    <xacro:if value="${'$(arg drive)' == 'mecanum'}">
+        <xacro:mecanum_wheel name="front_left" x="${wheel_pos_x}" y="${wheel_pos_y}" pitch="${roller_angle}" />
+        <xacro:mecanum_wheel name="front_right" x="${wheel_pos_x}" y="${-wheel_pos_y}" pitch="${pi - roller_angle}" />
+        <xacro:mecanum_wheel name="rear_left" x="${-wheel_pos_x}" y="${wheel_pos_y}" pitch="${pi - roller_angle}" />
+        <xacro:mecanum_wheel name="rear_right" x="${-wheel_pos_x}" y="${-wheel_pos_y}" pitch="${roller_angle}" />
+
+        <ros2_control name="GazeboSystem" type="system">
+            <hardware>
+                <plugin>gazebo_ros2_control/GazeboSystem</plugin>
+            </hardware>
+            <xacro:macro name="wheel_interface" params="joint">
+                <joint name="${joint}">
+                    <command_interface name="velocity"/>
+                    <state_interface name="velocity"/>
+                    <state_interface name="position"/>
+                </joint>
+            </xacro:macro>
+            <xacro:wheel_interface joint="base_front_left_wheel_joint" />
+            <xacro:wheel_interface joint="base_front_right_wheel_joint" />
+            <xacro:wheel_interface joint="base_rear_left_wheel_joint" />
+            <xacro:wheel_interface joint="base_rear_right_wheel_joint" />
+        </ros2_control>
+
+        <gazebo>
+            <plugin name="gazebo_ros2_control" filename="libgazebo_ros2_control.so">
+                <parameters>$(arg controllers_file)</parameters>
+            </plugin>
+        </gazebo>
+    </xacro:if>
+
+    <xacro:unless value="${'$(arg drive)' == 'mecanum'}">
+        <xacro:fixed_wheel name="front_left" x="${wheel_pos_x}" y="${wheel_pos_y}" />
+        <xacro:fixed_wheel name="front_right" x="${wheel_pos_x}" y="${-wheel_pos_y}" />
+        <xacro:fixed_wheel name="rear_left" x="${-wheel_pos_x}" y="${wheel_pos_y}" />
+        <xacro:fixed_wheel name="rear_right" x="${-wheel_pos_x}" y="${-wheel_pos_y}" />
+    <gazebo>
+        <plugin name="gazebo_ros_planar_move" filename="libgazebo_ros_planar_move.so">
+            <ros>
+                <remapping>cmd_vel:=/cmd_vel</remapping>
+                <remapping>odom:=/odom</remapping>
+            </ros>
+            <update_rate>100</update_rate>
+            <publish_rate>50</publish_rate>
+            <publish_odom>true</publish_odom>
+            <!-- No EKF here: this plugin owns odom -> base_link. -->
+            <publish_odom_tf>true</publish_odom_tf>
+            <odometry_frame>odom</odometry_frame>
+            <robot_base_frame>base_link</robot_base_frame>
+            <covariance_x>0.0001</covariance_x>
+            <covariance_y>0.0001</covariance_y>
+            <covariance_yaw>0.001</covariance_yaw>
+        </plugin>
+        </gazebo>
+    </xacro:unless>
+
+    <gazebo reference="base_link">
+        <material>Gazebo/Grey</material>
+        <sensor name="contact_sensor" type="contact">
+            <always_on>true</always_on>
+            <update_rate>50</update_rate>
+            <contact>
+                <!-- Gazebo renames collisions when it lumps fixed joints; verify with
+                     `gz sdf -p /tmp/martha.urdf | grep "<collision name"`. -->
+                <collision>base_link_fixed_joint_lump__contact_shell_collision_collision</collision>
+            </contact>
+            <!-- Publishes on /bumper_states, where evaluate_gazebo listens. No remapping
+                 here on purpose, because a remapping rule inside the URDF would also reach
+                 the parameter override rule described at the top of this file. -->
+            <plugin name="gazebo_ros_bumper" filename="libgazebo_ros_bumper.so">
+                <frame_name>base_link</frame_name>
+            </plugin>
+        </sensor>
+    </gazebo>
+
+    <gazebo reference="lidar">
+        <material>Gazebo/Green</material>
+        <sensor name="lidar_sensor" type="ray">
+            <always_on>true</always_on>
+            <visualize>$(arg lidar_visualize)</visualize>
+            <update_rate>10</update_rate>
+            <ray>
+                <scan>
+                    <horizontal>
+                        <samples>$(arg lidar_samples)</samples>
+                        <resolution>1</resolution>
+                        <min_angle>${-pi}</min_angle>
+                        <max_angle>${pi}</max_angle>
+                    </horizontal>
+                </scan>
+                <range>
+                    <min>0.12</min>
+                    <max>8.0</max>
+                    <resolution>0.01</resolution>
+                </range>
+                <noise>
+                    <type>gaussian</type>
+                    <mean>0.0</mean>
+                    <stddev>0.01</stddev>
+                </noise>
+            </ray>
+            <!-- Publishes on /gazebo_ros_lidar/out; the launch file remaps it to /scan
+                 for the policy (see the bumper comment above for why not here). -->
+            <plugin name="gazebo_ros_lidar" filename="libgazebo_ros_ray_sensor.so">
+                <output_type>sensor_msgs/LaserScan</output_type>
+                <frame_name>lidar</frame_name>
+            </plugin>
+        </sensor>
+    </gazebo>
+
+</robot>
